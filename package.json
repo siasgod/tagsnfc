@@ -10,7 +10,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:criar-admin": "tsx scripts/criar-admin.ts",
-    "test": "NODE_OPTIONS=--conditions=react-server tsx --test tests/*.test.ts",
+    "test": "node --conditions=react-server --import tsx --test tests/*.test.ts",
     "verificar:qr": "tsx scripts/verificar-qr.ts"
   },
   "dependencies": {
