@@ -1,0 +1,5 @@
+Fonte Poppins (Google Fonts), licenciada sob a SIL Open Font License 1.1.
+https://fonts.google.com/specimen/Poppins
+https://scripts.sil.org/OFL
+Incluída aqui para permitir a incorporação real da fonte nos PDFs gerados
+(requisito da especificação: "Incorporar fontes no PDF").
