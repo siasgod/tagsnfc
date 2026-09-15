@@ -1,6 +1,13 @@
 import { contarUsuarios } from "@/lib/db/repo/usuarios";
 import { SetupForm } from "./SetupForm";
 
+// Força renderização dinâmica: esta página consulta o banco a cada acesso.
+// Sem isso, o Next tenta pré-renderizar estaticamente no build — e além de
+// depender de conseguir conectar ao banco no momento exato da compilação,
+// arriscaria "congelar" para sempre a contagem de usuários vista no momento
+// do build.
+export const dynamic = "force-dynamic";
+
 export default async function PaginaSetup() {
   const total = await contarUsuarios();
 

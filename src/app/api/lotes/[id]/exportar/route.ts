@@ -56,7 +56,7 @@ async function exportarLote(request: NextRequest, context: { params: Promise<{ i
   if (placas.length === 0) return Response.json({ erro: "Lote sem placas." }, { status: 404 });
 
   const config = await obterConfiguracao();
-  const parametros = { ...parametrosImpressaoPadrao(), ...(lote.parametros_impressao as object) };
+  const parametros = parametrosImpressaoPadrao();
   const opcoes = {
     nomeOperacao: config.nome_operacao || undefined,
     marcaDagua: modoEfetivo === "demo" ? "DEMONSTRAÇÃO — NÃO IMPRIMIR" : undefined,
@@ -146,6 +146,9 @@ async function exportarLote(request: NextRequest, context: { params: Promise<{ i
         [`${lote.codigo}.csv`]: csv,
       };
       if (a4Buffer) arquivos[`${nomeArquivoBase}-a4.pdf`] = a4Buffer;
+      for (const placa of placas) {
+        arquivos[`individuais/${placa.codigo}${modoEfetivo === "demo" ? "-DEMO" : ""}.pdf`] = await gerarPdfCartaoIndividual({ codigo: placa.codigo, urlQr: placa.url_qr }, parametros, opcoes);
+      }
       const zip = await gerarZip(arquivos);
       return new Response(new Uint8Array(zip), {
         headers: {

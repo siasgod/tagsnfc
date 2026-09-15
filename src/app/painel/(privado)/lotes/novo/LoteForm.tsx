@@ -7,7 +7,7 @@ import { BotaoEnviar } from "@/components/ui/BotaoEnviar";
 import type { EstadoFormulario } from "@/lib/actions/auth";
 
 const estadoInicial: EstadoFormulario = {};
-const TAMANHOS_SUGERIDOS = [5, 10, 50, 100];
+const TAMANHOS_SUGERIDOS = [10, 30, 50, 100];
 
 export function LoteForm({ origemAtual }: { origemAtual: string }) {
   const [estado, acao] = useActionState(criarLoteAction, estadoInicial);

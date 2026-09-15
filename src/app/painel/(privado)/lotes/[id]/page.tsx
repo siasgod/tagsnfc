@@ -26,6 +26,9 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
         </p>
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        {[["Total", placas.length], ["Disponíveis", placas.filter(p => p.estado_comercial === "DISPONIVEL").length], ["Ativas", placas.filter(p => p.estado_comercial === "ATIVA").length]].map(([nome, valor]) => <div key={nome} className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">{nome}</p><p className="mt-2 text-2xl font-semibold">{valor}</p></div>)}
+      </div>
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-2 text-sm font-medium text-slate-700">Exportar para impressão</h2>
         {!liberacao.liberado && (
@@ -34,6 +37,7 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
             <strong> demonstração</strong>, com marca d&apos;água, até que isso seja resolvido em Configurações.
           </p>
         )}
+        <p className="mb-4 text-sm text-slate-500">Placas de 100 × 100 mm · arquivo de 106 × 106 mm com sangria · QR individual de 35 mm. Baixe diretamente por aqui e imprima em escala 100%. PDF em RGB; confirme o perfil de cor com a gráfica.</p>
         <div className="flex flex-wrap gap-2">
           {(["multipagina", "a4", "csv", "zip"] as const).map((tipo) => (
             <a
@@ -41,10 +45,10 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
               href={`${base}?tipo=${tipo}&modo=${liberacao.liberado ? "producao" : "demo"}`}
               className="botao-toque flex items-center rounded-lg border border-slate-300 px-3 text-sm font-medium hover:bg-slate-50"
             >
-              {tipo === "multipagina" && "PDF multipágina"}
-              {tipo === "a4" && "PDF imposição A4"}
+              {tipo === "multipagina" && "Baixar PDF para gráfica"}
+              {tipo === "a4" && "Baixar PDF em folhas A4"}
               {tipo === "csv" && "CSV do lote"}
-              {tipo === "zip" && "ZIP (tudo)"}
+              {tipo === "zip" && "Baixar ZIP com PDFs individuais"}
             </a>
           ))}
         </div>
@@ -66,15 +70,15 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
             <tbody className="divide-y divide-slate-100">
               {placas.map((p: any) => (
                 <tr key={p.id}>
-                  <td className="px-3 py-2">
+                  <td data-label="Código" className="px-3 py-2">
                     <Link href={`/painel/placas/${p.id}`} className="font-medium text-blue-600">
                       {p.codigo}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{p.estado_producao}</td>
-                  <td className="px-3 py-2">{p.estado_comercial}</td>
-                  <td className="px-3 py-2">{p.estabelecimento_nome ?? "—"}</td>
-                  <td className="px-3 py-2">
+                  <td data-label="Produção" className="px-3 py-2">{p.estado_producao}</td>
+                  <td data-label="Comercial" className="px-3 py-2">{p.estado_comercial}</td>
+                  <td data-label="Estabelecimento" className="px-3 py-2">{p.estabelecimento_nome ?? "—"}</td>
+                  <td data-label="PDF" className="px-3 py-2">
                     <a
                       className="text-blue-600"
                       href={`${base}?tipo=pdf-individual&placaCodigo=${p.codigo}&modo=${liberacao.liberado ? "producao" : "demo"}`}

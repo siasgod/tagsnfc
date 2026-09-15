@@ -44,15 +44,15 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
           <tbody className="divide-y divide-slate-100">
             {clientes.map((c: any) => (
               <tr key={c.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2">
+                <td data-label="Nome" className="px-3 py-2">
                   <Link href={`/painel/clientes/${c.id}`} className="font-medium text-blue-600">
                     {c.nome}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{c.telefone ?? "—"}</td>
-                <td className="px-3 py-2">{c.total_estabelecimentos}</td>
-                <td className="px-3 py-2">{c.total_placas}</td>
-                <td className="px-3 py-2">{c.vendedor_nome ?? "—"}</td>
+                <td data-label="Telefone" className="px-3 py-2">{c.telefone ?? "—"}</td>
+                <td data-label="Estabelecimentos" className="px-3 py-2">{c.total_estabelecimentos}</td>
+                <td data-label="Placas" className="px-3 py-2">{c.total_placas}</td>
+                <td data-label="Vendedor" className="px-3 py-2">{c.vendedor_nome ?? "—"}</td>
               </tr>
             ))}
             {clientes.length === 0 && (

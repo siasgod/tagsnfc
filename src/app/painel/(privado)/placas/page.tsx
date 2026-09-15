@@ -48,14 +48,14 @@ export default async function PaginaPlacas({
           <tbody className="divide-y divide-slate-100">
             {placas.map((p: any) => (
               <tr key={p.id}>
-                <td className="px-3 py-2">
+                <td data-label="Código" className="px-3 py-2">
                   <Link href={`/painel/placas/${p.id}`} className="font-medium text-blue-600">
                     {p.codigo}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{p.estado_comercial}</td>
-                <td className="px-3 py-2">{p.estabelecimento_nome ?? "—"}</td>
-                <td className="px-3 py-2">{p.vendedor_nome ?? "—"}</td>
+                <td data-label="Estado" className="px-3 py-2">{p.estado_comercial}</td>
+                <td data-label="Estabelecimento" className="px-3 py-2">{p.estabelecimento_nome ?? "—"}</td>
+                <td data-label="Vendedor" className="px-3 py-2">{p.vendedor_nome ?? "—"}</td>
               </tr>
             ))}
             {placas.length === 0 && (

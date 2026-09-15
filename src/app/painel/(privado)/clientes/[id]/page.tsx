@@ -62,13 +62,13 @@ export default async function PaginaClienteDetalhe({ params }: { params: Promise
             <tbody className="divide-y divide-slate-100">
               {placas.map((p: any) => (
                 <tr key={p.id}>
-                  <td className="px-3 py-2">
+                  <td data-label="Código" className="px-3 py-2">
                     <Link href={`/painel/placas/${p.id}`} className="text-blue-600">
                       {p.codigo}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{p.estabelecimento_nome}</td>
-                  <td className="px-3 py-2">{p.estado_comercial}</td>
+                  <td data-label="Estabelecimento" className="px-3 py-2">{p.estabelecimento_nome}</td>
+                  <td data-label="Estado" className="px-3 py-2">{p.estado_comercial}</td>
                 </tr>
               ))}
               {placas.length === 0 && (
@@ -99,15 +99,15 @@ export default async function PaginaClienteDetalhe({ params }: { params: Promise
             <tbody className="divide-y divide-slate-100">
               {vendas.map((v: any) => (
                 <tr key={v.id}>
-                  <td className="px-3 py-2">
+                  <td data-label="Data" className="px-3 py-2">
                     <Link href={`/painel/vendas/${v.id}`} className="text-blue-600">
                       {formatarData(v.criado_em)}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{v.tipo}</td>
-                  <td className="px-3 py-2">{formatarBRL(v.total_centavos)}</td>
-                  <td className="px-3 py-2">{formatarBRL(Number(v.pago_centavos))}</td>
-                  <td className="px-3 py-2">{v.situacao_pagamento}</td>
+                  <td data-label="Tipo" className="px-3 py-2">{v.tipo}</td>
+                  <td data-label="Total" className="px-3 py-2">{formatarBRL(v.total_centavos)}</td>
+                  <td data-label="Pago" className="px-3 py-2">{formatarBRL(Number(v.pago_centavos))}</td>
+                  <td data-label="Situação" className="px-3 py-2">{v.situacao_pagamento}</td>
                 </tr>
               ))}
               {vendas.length === 0 && (

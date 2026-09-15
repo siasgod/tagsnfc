@@ -32,15 +32,15 @@ export default async function PaginaLotes() {
           <tbody className="divide-y divide-slate-100">
             {lotes.map((l: any) => (
               <tr key={l.id}>
-                <td className="px-3 py-2">
+                <td data-label="Código" className="px-3 py-2">
                   <Link href={`/painel/lotes/${l.id}`} className="font-medium text-blue-600">
                     {l.codigo}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{l.quantidade}</td>
-                <td className="px-3 py-2">{l.disponiveis}</td>
-                <td className="px-3 py-2">{l.ativas}</td>
-                <td className="px-3 py-2">{formatarDataHora(l.criado_em)}</td>
+                <td data-label="Quantidade" className="px-3 py-2">{l.quantidade}</td>
+                <td data-label="Disponíveis" className="px-3 py-2">{l.disponiveis}</td>
+                <td data-label="Ativas" className="px-3 py-2">{l.ativas}</td>
+                <td data-label="Criado em" className="px-3 py-2">{formatarDataHora(l.criado_em)}</td>
               </tr>
             ))}
             {lotes.length === 0 && (

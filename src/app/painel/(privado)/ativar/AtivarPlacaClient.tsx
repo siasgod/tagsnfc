@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { LeitorQr } from "@/components/ativacao/LeitorQr";
 
-type Etapa = "buscar" | "situacao" | "cliente" | "estabelecimento" | "destino" | "venda" | "revisao" | "sucesso";
+type Etapa = "buscar" | "situacao" | "cliente" | "estabelecimento" | "destino" | "nfc" | "venda" | "revisao" | "sucesso";
 
 interface PlacaInfo {
   id: string;
@@ -86,6 +86,8 @@ export function AtivarPlacaClient({
       }
       setPlaca(dados);
       setEtapa("situacao");
+    } catch {
+      setErro("Não foi possível consultar a placa. Tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -97,8 +99,11 @@ export function AtivarPlacaClient({
       setResultadosClientes([]);
       return;
     }
-    const resp = await fetch(`/api/clientes/busca?q=${encodeURIComponent(q)}`);
-    if (resp.ok) setResultadosClientes(await resp.json());
+    try {
+      const resp = await fetch(`/api/clientes/busca?q=${encodeURIComponent(q)}`);
+      if (resp.ok) setResultadosClientes(await resp.json());
+      else setErro("Não foi possível buscar clientes.");
+    } catch { setErro("Não foi possível buscar clientes. Verifique a conexão."); }
   }
 
   async function conferirDestino() {
@@ -116,7 +121,9 @@ export function AtivarPlacaClient({
         setErro(dados.motivo);
         return;
       }
-      setEtapa("venda");
+      setEtapa(dados.status === "valido_requer_conferencia" ? "destino" : "nfc");
+    } catch {
+      setErro("Não foi possível conferir o destino. Tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -154,6 +161,8 @@ export function AtivarPlacaClient({
 
       if (resp.status === 409 && dados.exigeConferenciaManual) {
         setChecagemDestino({ status: "valido_requer_conferencia", motivo: dados.motivo, urlFinal: dados.urlFinal });
+        setAceitarConferenciaManual(false);
+        setEtapa("destino");
         setErro(null);
         return;
       }
@@ -172,9 +181,30 @@ export function AtivarPlacaClient({
     }
   }
 
+  const etapas = ["Placa", "Cliente", "Estabelecimento", "Google", "NFC", "Venda"];
+  const indice = { buscar: 0, situacao: 0, cliente: 1, estabelecimento: 2, destino: 3, nfc: 4, venda: 5, revisao: 5, sucesso: 5 }[etapa];
+  const anteriores: Partial<Record<Etapa, Etapa>> = { cliente: "situacao", estabelecimento: "cliente", destino: "estabelecimento", nfc: "destino", venda: "nfc" };
+  const progresso = <div className="mb-6 space-y-4">
+    <ol aria-label="Etapas da ativação" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      {etapas.map((nome, i) => <li key={nome} aria-current={i === indice ? "step" : undefined} className={i === indice ? "rounded-xl bg-blue-600 p-3 text-xs font-semibold text-white" : "rounded-xl bg-slate-100 p-3 text-xs text-slate-600"}>{i + 1}. {nome}</li>)}
+    </ol>
+    <p className="text-sm text-slate-500">Etapa {indice + 1} de 6 · {placa?.codigo ?? "Identifique a unidade impressa"}</p>
+    {anteriores[etapa] && <button disabled={carregando} className="botao-toque text-sm text-blue-700" onClick={() => { setErro(null); setEtapa(anteriores[etapa]!); }}>← Voltar</button>}
+  </div>;
+
+  if (etapa === "nfc" && placa) return <div className="space-y-4">{progresso}
+    <h2 className="text-xl font-semibold">Prepare o NFC</h2>
+    <p className="text-sm text-slate-600">Copie esta URL e grave um registro de URL no chip usando o NFC Tools. O navegador apenas fornece o endereço. Teste a placa física após concluir a venda.</p>
+    <label className="block text-sm font-medium">URL NFC<input readOnly value={placa.urlNfc} onFocus={e => e.target.select()} className="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm" /></label>
+    <button className="botao-toque w-full rounded-lg border border-blue-600 text-blue-700" onClick={async () => { try { await navigator.clipboard.writeText(placa.urlNfc); setErro("URL copiada."); } catch { setErro("Selecione a URL acima e copie manualmente."); } }}>Copiar URL NFC</button>
+    {erro && <p role="status" className="text-sm">{erro}</p>}
+    <button className="botao-toque w-full rounded-lg bg-blue-600 text-white" onClick={() => { setErro(null); setEtapa("venda"); }}>Continuar para venda</button>
+  </div>;
+
   if (etapa === "buscar") {
     return (
       <div className="space-y-4">
+        {progresso}
         <p className="text-sm text-slate-500">Escaneie o QR da placa ou digite o código.</p>
         <LeitorQr onDetectado={buscarPlaca} />
         {carregando && <p className="text-sm text-slate-500">Buscando…</p>}
@@ -186,9 +216,10 @@ export function AtivarPlacaClient({
   if (!placa) return null;
 
   if (etapa === "situacao") {
-    const jaAtiva = placa.estadoComercial === "ATIVA";
+    const jaAtiva = ["ATIVA", "PERDIDA", "SUBSTITUIDA"].includes(placa.estadoComercial);
     return (
       <div className="space-y-4">
+        {progresso}
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="text-sm text-slate-500">Placa</p>
           <p className="text-lg font-semibold">{placa.codigo}</p>
@@ -198,7 +229,7 @@ export function AtivarPlacaClient({
         </div>
         {jaAtiva ? (
           <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Esta placa já está ativa. Para trocar o vínculo ou destino, acesse a página da placa em
+            Esta placa não permite primeira ativação neste estado. Para trocar o vínculo ou destino, acesse a página da placa em
             &ldquo;Placas&rdquo; e use a ação explícita de mudança de vínculo — este fluxo é só para primeira
             ativação.
           </div>
@@ -220,13 +251,15 @@ export function AtivarPlacaClient({
   if (etapa === "cliente") {
     return (
       <div className="space-y-4">
+        {progresso}
         <h2 className="font-medium">Cliente</h2>
+        {erro && <p role="alert" className="text-sm text-red-700">{erro}</p>}
         {!criandoNovoCliente ? (
           <>
             <input
               value={buscaCliente}
               onChange={(e) => buscarClientes(e.target.value)}
-              placeholder="Buscar por nome ou telefone"
+              aria-label="Buscar por nome ou telefone" placeholder="Buscar por nome ou telefone"
               className="botao-toque w-full rounded-lg border border-slate-300 px-3"
             />
             <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
@@ -236,6 +269,8 @@ export function AtivarPlacaClient({
                     className="w-full px-3 py-2 text-left hover:bg-slate-50"
                     onClick={() => {
                       setClienteEscolhido(c);
+                      setEstabelecimentoEscolhidoId(null);
+                      setCriandoNovoEstabelecimento(false);
                       setEtapa("estabelecimento");
                     }}
                   >
@@ -245,7 +280,7 @@ export function AtivarPlacaClient({
                 </li>
               ))}
             </ul>
-            <button className="text-sm text-blue-600 underline" onClick={() => setCriandoNovoCliente(true)}>
+            <button className="text-sm text-blue-600 underline" onClick={() => { setCriandoNovoCliente(true); setClienteEscolhido(null); setEstabelecimentoEscolhidoId(null); setCriandoNovoEstabelecimento(true); }}>
               + Cadastrar novo cliente
             </button>
           </>
@@ -254,13 +289,13 @@ export function AtivarPlacaClient({
             <input
               value={novoClienteNome}
               onChange={(e) => setNovoClienteNome(e.target.value)}
-              placeholder="Nome do cliente/comércio"
+              aria-label="Nome do cliente/comércio" placeholder="Nome do cliente/comércio"
               className="botao-toque w-full rounded-lg border border-slate-300 px-3"
             />
             <input
               value={novoClienteTelefone}
               onChange={(e) => setNovoClienteTelefone(e.target.value)}
-              placeholder="Telefone/WhatsApp"
+              aria-label="Telefone/WhatsApp" placeholder="Telefone/WhatsApp"
               className="botao-toque w-full rounded-lg border border-slate-300 px-3"
             />
             <button
@@ -283,6 +318,7 @@ export function AtivarPlacaClient({
     const estabelecimentosDoCliente = clienteEscolhido?.estabelecimentos ?? [];
     return (
       <div className="space-y-4">
+        {progresso}
         <h2 className="font-medium">Estabelecimento</h2>
         {!criandoNovoEstabelecimento ? (
           <>
@@ -314,7 +350,7 @@ export function AtivarPlacaClient({
             <input
               value={novoEstabelecimentoNome}
               onChange={(e) => setNovoEstabelecimentoNome(e.target.value)}
-              placeholder="Nome do estabelecimento"
+              aria-label="Nome do estabelecimento" placeholder="Nome do estabelecimento"
               className="botao-toque w-full rounded-lg border border-slate-300 px-3"
             />
             <button
@@ -333,11 +369,12 @@ export function AtivarPlacaClient({
   if (etapa === "destino") {
     return (
       <div className="space-y-4">
+        {progresso}
         <h2 className="font-medium">Link de avaliação do Google</h2>
         <input
           value={destinoUrl}
-          onChange={(e) => setDestinoUrl(e.target.value)}
-          placeholder="https://g.page/r/.../review"
+          onChange={(e) => { setDestinoUrl(e.target.value); setChecagemDestino(null); setAceitarConferenciaManual(false); }}
+          aria-label="https://g.page/r/.../review" placeholder="https://g.page/r/.../review"
           className="botao-toque w-full rounded-lg border border-slate-300 px-3"
         />
         {checagemDestino?.status === "valido_requer_conferencia" && (
@@ -364,7 +401,7 @@ export function AtivarPlacaClient({
           className="botao-toque w-full rounded-lg bg-blue-600 px-4 font-medium text-white disabled:bg-blue-300"
           onClick={() =>
             checagemDestino?.status === "valido_requer_conferencia" && aceitarConferenciaManual
-              ? setEtapa("venda")
+              ? setEtapa("nfc")
               : conferirDestino()
           }
         >
@@ -377,6 +414,7 @@ export function AtivarPlacaClient({
   if (etapa === "venda") {
     return (
       <div className="space-y-4">
+        {progresso}
         <h2 className="font-medium">Venda</h2>
         <div className="flex gap-2">
           {(["VENDA", "DEMONSTRACAO", "BONIFICACAO"] as const).map((t) => (
@@ -416,7 +454,7 @@ export function AtivarPlacaClient({
           <input
             value={justificativa}
             onChange={(e) => setJustificativa(e.target.value)}
-            placeholder="Justificativa (obrigatória)"
+            aria-label="Justificativa (obrigatória)" placeholder="Justificativa (obrigatória)"
             className="botao-toque w-full rounded-lg border border-slate-300 px-3"
           />
         )}
@@ -435,6 +473,7 @@ export function AtivarPlacaClient({
   if (etapa === "sucesso" && resultado) {
     return (
       <div className="space-y-4 text-center">
+        {progresso}
         <div className="rounded-xl bg-green-50 p-6">
           <p className="text-lg font-semibold text-green-800">Placa {resultado.codigo} ativada!</p>
           <p className="mt-1 text-sm text-green-700">Confirmado e salvo no servidor.</p>

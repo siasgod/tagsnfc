@@ -6,9 +6,9 @@ import Link from "next/link";
 
 function Cartao({ titulo, valor, nota }: { titulo: string; valor: string; nota?: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{titulo}</p>
-      <p className="mt-1 text-2xl font-semibold text-slate-900">{valor}</p>
+      <p className="mt-3 text-2xl font-semibold text-slate-900">{valor}</p>
       {nota && <p className="mt-0.5 text-xs text-slate-400">{nota}</p>}
     </div>
   );
@@ -21,7 +21,7 @@ export default async function PaginaDashboard({
 }) {
   const usuario = await obterUsuarioAtual();
   const { dias: diasParam } = await searchParams;
-  const dias = Number(diasParam ?? "30") || 30;
+  const dias = [7, 30, 90].includes(Number(diasParam)) ? Number(diasParam) : 30;
 
   const fim = new Date();
   const inicioBase = new Date(fim.getTime() - dias * 24 * 60 * 60 * 1000);
@@ -47,7 +47,13 @@ export default async function PaginaDashboard({
         </div>
       </div>
 
-      <section>
+      <section className="rounded-2xl bg-slate-900 p-6 text-white sm:p-8">
+        <p className="text-xs uppercase tracking-widest text-blue-200">Operação TAGS NFC</p>
+        <h2 className="mt-2 text-2xl font-semibold">Da produção à primeira avaliação.</h2>
+        <p className="mt-2 max-w-xl text-sm text-slate-300">Acompanhe o estoque, organize seus clientes e ative cada unidade no momento da venda.</p>
+        <div className="mt-6 flex flex-wrap gap-3"><Link href="/painel/ativar" className="botao-toque flex items-center rounded-xl bg-blue-600 px-5 font-medium">Ativar placa →</Link><Link href="/painel/lotes" className="botao-toque flex items-center rounded-xl border border-slate-600 px-5">Produção e downloads</Link><Link href="/painel/clientes/novo" className="botao-toque flex items-center px-3">Novo cliente</Link></div>
+      </section>
+      <section className="space-y-3">
         <h2 className="mb-2 text-sm font-medium text-slate-500">Placas</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Cartao titulo="Produzidas" valor={String(indicadores.placasProduzidas)} />

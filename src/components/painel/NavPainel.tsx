@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkNavegacao } from "./LinkNavegacao";
 import { sair } from "@/lib/actions/auth";
 import type { UsuarioSessao } from "@/lib/auth/sessao";
 
@@ -14,15 +15,13 @@ export function NavPainel({ usuario }: { usuario: UsuarioSessao }) {
   return (
     <>
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
           <Link href="/painel" className="font-semibold text-slate-900">
-            Painel de Placas
+            TAGS NFC
           </Link>
-          <nav className="hidden gap-4 text-sm text-slate-600 sm:flex">
+          <nav className="hidden gap-3 text-sm text-slate-600 lg:flex">
             {LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="hover:text-blue-600">
-                {l.label}
-              </Link>
+              <LinkNavegacao key={l.href} href={l.href}>{l.label}</LinkNavegacao>
             ))}
             {usuario.papel === "ADMIN" && (
               <Link href="/painel/configuracoes" className="hover:text-blue-600">
@@ -31,9 +30,10 @@ export function NavPainel({ usuario }: { usuario: UsuarioSessao }) {
             )}
           </nav>
           <div className="flex items-center gap-3">
+            {usuario.papel === "ADMIN" && <Link href="/painel/configuracoes" className="botao-toque flex items-center text-xs text-slate-600 lg:hidden">Configurações</Link>}
             <Link
               href="/painel/ativar"
-              className="botao-toque hidden items-center rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 sm:inline-flex"
+              className="botao-toque hidden items-center rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 lg:inline-flex"
             >
               Ativar placa
             </Link>
@@ -48,11 +48,9 @@ export function NavPainel({ usuario }: { usuario: UsuarioSessao }) {
       </header>
 
       {/* Barra inferior fixa para celular: acesso rápido + botão de ativação em destaque. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 flex items-stretch border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] sm:hidden">
-        {LINKS.slice(0, 2).map((l) => (
-          <Link key={l.href} href={l.href} className="flex-1 py-3 text-center text-xs text-slate-600">
-            {l.label}
-          </Link>
+      <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-6 items-stretch border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] lg:hidden">
+        {LINKS.slice(0, 3).map((l) => (
+          <LinkNavegacao key={l.href} href={l.href}>{l.label}</LinkNavegacao>
         ))}
         <Link
           href="/painel/ativar"
@@ -61,9 +59,7 @@ export function NavPainel({ usuario }: { usuario: UsuarioSessao }) {
           Ativar
         </Link>
         {LINKS.slice(3).map((l) => (
-          <Link key={l.href} href={l.href} className="flex-1 py-3 text-center text-xs text-slate-600">
-            {l.label}
-          </Link>
+          <LinkNavegacao key={l.href} href={l.href}>{l.label}</LinkNavegacao>
         ))}
       </nav>
     </>
