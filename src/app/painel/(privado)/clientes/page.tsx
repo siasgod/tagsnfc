@@ -1,70 +1,34 @@
 import Link from "next/link";
 import { obterUsuarioAtual } from "@/lib/auth/sessao";
-import { podeVerTudo } from "@/lib/auth/autorizacao";
+import { podeVerTudo, temPermissao } from "@/lib/auth/autorizacao";
 import { listarClientes } from "@/lib/db/repo/clientes";
+import { listarCategorias } from "@/lib/db/repo/categorias";
+import { listarResponsaveisComerciais } from "@/lib/db/repo/usuarios";
+import { Badge, CabecalhoPagina, EstadoVazio, Secao } from "@/components/painel/PainelUI";
 
-export default async function PaginaClientes({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const { q } = await searchParams;
-  const usuario = await obterUsuarioAtual();
-  const clientes = await listarClientes({
-    vendedorId: podeVerTudo(usuario!) ? undefined : usuario!.id,
-    busca: q,
-  });
+export default async function PaginaClientes({ searchParams }: {
+  searchParams: Promise<{ q?: string; categoria?: string; responsavel?: string }>;
+}) {
+  const filtros = await searchParams;
+  const usuario = (await obterUsuarioAtual())!;
+  const [clientes, categorias, responsaveis] = await Promise.all([
+    listarClientes({ vendedorId: podeVerTudo(usuario) ? undefined : usuario.id, busca: filtros.q, categoriaId: filtros.categoria, responsavelId: podeVerTudo(usuario) ? filtros.responsavel : undefined }),
+    listarCategorias(),
+    podeVerTudo(usuario) ? listarResponsaveisComerciais() : Promise.resolve([]),
+  ]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Clientes</h1>
-        <Link href="/painel/clientes/novo" className="botao-toque rounded-lg bg-blue-600 px-3 text-sm font-medium text-white flex items-center">
-          + Novo cliente
-        </Link>
-      </div>
-
-      <form className="flex gap-2">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Buscar por nome ou telefone"
-          className="botao-toque flex-1 rounded-lg border border-slate-300 px-3"
-        />
-        <button className="botao-toque rounded-lg bg-slate-800 px-4 text-sm font-medium text-white">Buscar</button>
+    <div className="space-y-5">
+      <CabecalhoPagina titulo="Clientes" descricao="Carteira comercial, categorias, responsáveis e desempenho consolidado." acao={temPermissao(usuario, "CLIENTES_EDITAR") ? <Link href="/painel/clientes/novo" className="button button-primary">+ Novo cliente</Link> : undefined} />
+      <form className="surface grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="form-field lg:col-span-2">Buscar<input name="q" defaultValue={filtros.q} placeholder="Nome, telefone ou e-mail" /></label>
+        <label className="form-field">Categoria<select name="categoria" defaultValue={filtros.categoria ?? ""}><option value="">Todas</option>{categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></label>
+        {podeVerTudo(usuario) ? <label className="form-field">Responsável<select name="responsavel" defaultValue={filtros.responsavel ?? ""}><option value="">Todos</option>{responsaveis.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}</select></label> : null}
+        <div className="flex gap-2 lg:col-span-4"><button className="button button-primary">Aplicar filtros</button><Link href="/painel/clientes" className="button button-secondary">Limpar</Link></div>
       </form>
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full min-w-[500px] text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-3 py-2">Nome</th>
-              <th className="px-3 py-2">Telefone</th>
-              <th className="px-3 py-2">Estabelecimentos</th>
-              <th className="px-3 py-2">Placas</th>
-              <th className="px-3 py-2">Vendedor</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {clientes.map((c: any) => (
-              <tr key={c.id} className="hover:bg-slate-50">
-                <td data-label="Nome" className="px-3 py-2">
-                  <Link href={`/painel/clientes/${c.id}`} className="font-medium text-blue-600">
-                    {c.nome}
-                  </Link>
-                </td>
-                <td data-label="Telefone" className="px-3 py-2">{c.telefone ?? "—"}</td>
-                <td data-label="Estabelecimentos" className="px-3 py-2">{c.total_estabelecimentos}</td>
-                <td data-label="Placas" className="px-3 py-2">{c.total_placas}</td>
-                <td data-label="Vendedor" className="px-3 py-2">{c.vendedor_nome ?? "—"}</td>
-              </tr>
-            ))}
-            {clientes.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
-                  Nenhum cliente encontrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Secao titulo={`${clientes.length} cliente${clientes.length === 1 ? "" : "s"}`} descricao="Clique em um cliente para abrir o perfil completo">
+        {clientes.length ? <div className="table-wrap"><table><thead><tr><th>Cliente</th><th>Categoria</th><th>Responsável</th><th>Estabelecimentos</th><th>Placas</th><th>Interações</th></tr></thead><tbody>{clientes.map((c) => <tr key={c.id}><td data-label="Cliente"><Link href={`/painel/clientes/${c.id}`}>{c.nome}</Link><div className="mt-1 text-[11px] text-slate-400">{c.telefone ?? c.email ?? "Sem contato"}</div></td><td data-label="Categoria">{c.categoria_nome ? <Badge tom={c.categoria_cor}>{c.categoria_nome}</Badge> : "—"}</td><td data-label="Responsável">{c.vendedor_nome ?? "—"}</td><td data-label="Estabelecimentos">{c.total_estabelecimentos}</td><td data-label="Placas">{c.total_placas}</td><td data-label="Interações"><strong>{c.total_interacoes}</strong></td></tr>)}</tbody></table></div> : <EstadoVazio titulo="Nenhum cliente encontrado" descricao="Ajuste os filtros ou cadastre o primeiro cliente da carteira." href={temPermissao(usuario, "CLIENTES_EDITAR") ? "/painel/clientes/novo" : undefined} acao="Cadastrar cliente" />}
+      </Secao>
     </div>
   );
 }

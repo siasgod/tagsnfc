@@ -1,73 +1,27 @@
 import Link from "next/link";
 import { obterUsuarioAtual } from "@/lib/auth/sessao";
-import { podeVerTudo } from "@/lib/auth/autorizacao";
+import { podeVerTudo, temPermissao } from "@/lib/auth/autorizacao";
 import { listarPlacas } from "@/lib/db/repo/placas";
+import { formatarDataHora } from "@/lib/tempo";
+import { Badge, CabecalhoPagina, EstadoVazio, Secao } from "@/components/painel/PainelUI";
 
-export default async function PaginaPlacas({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; estado?: string }>;
-}) {
+const ESTADOS = ["DISPONIVEL", "RESERVADA", "ATIVA", "DESATIVADA", "SUBSTITUIDA", "PERDIDA"];
+
+export default async function PaginaPlacas({ searchParams }: { searchParams: Promise<{ q?: string; estado?: string }> }) {
   const { q, estado } = await searchParams;
-  const usuario = await obterUsuarioAtual();
-  const placas = await listarPlacas({
-    vendedorId: podeVerTudo(usuario!) ? undefined : usuario!.id,
-    busca: q,
-    estadoComercial: estado,
-  });
-
-  const ESTADOS = ["DISPONIVEL", "RESERVADA", "ATIVA", "DESATIVADA", "SUBSTITUIDA", "PERDIDA"];
-
+  const usuario = (await obterUsuarioAtual())!;
+  const placas = await listarPlacas({ vendedorId: podeVerTudo(usuario) ? undefined : usuario.id, busca: q, estadoComercial: estado });
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold">Placas</h1>
-
-      <form className="flex flex-wrap gap-2">
-        <input name="q" defaultValue={q} placeholder="Código, estabelecimento, telefone" className="botao-toque flex-1 min-w-[180px] rounded-lg border border-slate-300 px-3" />
-        <select name="estado" defaultValue={estado ?? ""} className="botao-toque rounded-lg border border-slate-300 px-3">
-          <option value="">Todos os estados</option>
-          {ESTADOS.map((e) => (
-            <option key={e} value={e}>
-              {e}
-            </option>
-          ))}
-        </select>
-        <button className="botao-toque rounded-lg bg-slate-800 px-4 text-sm font-medium text-white">Filtrar</button>
+    <div className="space-y-5">
+      <CabecalhoPagina titulo="Placas" descricao="Estoque, vínculos, status e uso de cada unidade." acao={temPermissao(usuario, "ATIVAR_PLACA") ? <Link href="/painel/ativar" className="button button-primary">+ Ativar placa</Link> : undefined} />
+      <form className="surface grid gap-3 p-4 sm:grid-cols-[1fr_14rem_auto]">
+        <label className="form-field">Buscar<input name="q" defaultValue={q} placeholder="Código, estabelecimento ou telefone" /></label>
+        <label className="form-field">Status<select name="estado" defaultValue={estado ?? ""}><option value="">Todos</option>{ESTADOS.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <div className="flex items-end"><button className="button button-primary w-full">Filtrar</button></div>
       </form>
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full min-w-[600px] text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-            <tr>
-              <th className="px-3 py-2">Código</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2">Estabelecimento</th>
-              <th className="px-3 py-2">Vendedor</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {placas.map((p: any) => (
-              <tr key={p.id}>
-                <td data-label="Código" className="px-3 py-2">
-                  <Link href={`/painel/placas/${p.id}`} className="font-medium text-blue-600">
-                    {p.codigo}
-                  </Link>
-                </td>
-                <td data-label="Estado" className="px-3 py-2">{p.estado_comercial}</td>
-                <td data-label="Estabelecimento" className="px-3 py-2">{p.estabelecimento_nome ?? "—"}</td>
-                <td data-label="Vendedor" className="px-3 py-2">{p.vendedor_nome ?? "—"}</td>
-              </tr>
-            ))}
-            {placas.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-slate-400">
-                  Nenhuma placa encontrada.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Secao titulo={`${placas.length} placa${placas.length === 1 ? "" : "s"}`}>
+        {placas.length ? <div className="table-wrap"><table><thead><tr><th>Placa</th><th>Status</th><th>Cliente / local</th><th>Responsável</th><th>Interações</th><th>Último acesso</th></tr></thead><tbody>{placas.map((p) => <tr key={p.id}><td data-label="Placa"><Link href={`/painel/placas/${p.id}`}>{p.codigo}</Link></td><td data-label="Status"><Badge tom={p.estado_comercial}>{p.estado_comercial}</Badge></td><td data-label="Cliente / local"><strong className="font-medium">{p.cliente_nome ?? "Sem cliente"}</strong><div className="mt-1 text-[11px] text-slate-400">{p.estabelecimento_nome ?? "Sem estabelecimento"}</div></td><td data-label="Responsável">{p.vendedor_nome ?? "—"}</td><td data-label="Interações"><strong>{p.total_interacoes}</strong></td><td data-label="Último acesso">{formatarDataHora(p.ultima_interacao)}</td></tr>)}</tbody></table></div> : <EstadoVazio titulo="Nenhuma placa encontrada" descricao="Ajuste os filtros ou gere um novo lote de placas." href="/painel/lotes" acao="Ver lotes" />}
+      </Secao>
     </div>
   );
 }

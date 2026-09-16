@@ -2,65 +2,61 @@ import Link from "next/link";
 import { LinkNavegacao } from "./LinkNavegacao";
 import { sair } from "@/lib/actions/auth";
 import type { UsuarioSessao } from "@/lib/auth/sessao";
+import { temPermissao } from "@/lib/auth/autorizacao";
 
 const LINKS = [
-  { href: "/painel", label: "Início" },
-  { href: "/painel/placas", label: "Placas" },
-  { href: "/painel/lotes", label: "Lotes" },
-  { href: "/painel/clientes", label: "Clientes" },
-  { href: "/painel/vendas", label: "Vendas" },
+  { href: "/painel", label: "Visão geral", simbolo: "⌂", permissao: "DASHBOARD_VER" as const },
+  { href: "/painel/desempenho", label: "Desempenho", simbolo: "↗", permissao: "DESEMPENHO_VER" as const },
+  { href: "/painel/placas", label: "Placas", simbolo: "▣", permissao: "PLACAS_VER" as const },
+  { href: "/painel/clientes", label: "Clientes", simbolo: "◉", permissao: "CLIENTES_VER" as const },
+  { href: "/painel/estabelecimentos", label: "Estabelecimentos", simbolo: "⌂", permissao: "CLIENTES_VER" as const },
+  { href: "/painel/vendas", label: "Vendas", simbolo: "$", permissao: "VENDAS_VER" as const },
+  { href: "/painel/lotes", label: "Lotes", simbolo: "▦", permissao: "LOTES_VER" as const },
+  { href: "/painel/equipe", label: "Equipe", simbolo: "◎", permissao: "EQUIPE_VER" as const },
 ];
 
 export function NavPainel({ usuario }: { usuario: UsuarioSessao }) {
   return (
     <>
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <Link href="/painel" className="font-semibold text-slate-900">
-            TAGS NFC
-          </Link>
-          <nav className="hidden gap-3 text-sm text-slate-600 lg:flex">
-            {LINKS.map((l) => (
-              <LinkNavegacao key={l.href} href={l.href}>{l.label}</LinkNavegacao>
-            ))}
-            {usuario.papel === "ADMIN" && (
-              <Link href="/painel/configuracoes" className="hover:text-blue-600">
-                Configurações
-              </Link>
-            )}
-          </nav>
-          <div className="flex items-center gap-3">
-            {usuario.papel === "ADMIN" && <Link href="/painel/configuracoes" className="botao-toque flex items-center text-xs text-slate-600 lg:hidden">Configurações</Link>}
-            <Link
-              href="/painel/ativar"
-              className="botao-toque hidden items-center rounded-lg bg-blue-600 px-4 font-medium text-white hover:bg-blue-700 lg:inline-flex"
-            >
-              Ativar placa
-            </Link>
-            <span className="hidden text-sm text-slate-500 md:inline">{usuario.nome}</span>
-            <form action={sair}>
-              <button className="text-sm text-slate-500 hover:text-slate-800" type="submit">
-                Sair
-              </button>
-            </form>
+      <aside className="sidebar hidden lg:flex">
+        <Link href="/painel" className="brand">
+          <span className="brand-mark">T</span>
+          <span><strong>TAGS NFC</strong><small>Gestão inteligente</small></span>
+        </Link>
+        <form action="/painel/busca" className="global-search">
+          <span aria-hidden="true">⌕</span>
+          <input name="q" aria-label="Busca global" placeholder="Buscar cliente, local ou placa" />
+        </form>
+        <nav className="sidebar-nav" aria-label="Navegação principal">
+          {LINKS.filter((l) => temPermissao(usuario, l.permissao)).map((l) => (
+            <LinkNavegacao key={l.href} href={l.href} simbolo={l.simbolo}>{l.label}</LinkNavegacao>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          {temPermissao(usuario, "CONFIGURACOES_VER") ? (
+            <LinkNavegacao href="/painel/configuracoes" simbolo="⚙">Configurações</LinkNavegacao>
+          ) : null}
+          <div className="user-card">
+            <span className="user-avatar">{usuario.nome.slice(0, 1).toUpperCase()}</span>
+            <span className="min-w-0 flex-1"><strong>{usuario.nome}</strong><small>{usuario.papel}</small></span>
+            <form action={sair}><button type="submit" aria-label="Sair">↪</button></form>
           </div>
+        </div>
+      </aside>
+
+      <header className="mobile-header lg:hidden">
+        <Link href="/painel" className="brand"><span className="brand-mark">T</span><strong>TAGS NFC</strong></Link>
+        <div className="flex items-center gap-2">
+          <Link href="/painel/busca" className="icon-button" aria-label="Buscar">⌕</Link>
+          {temPermissao(usuario, "ATIVAR_PLACA") ? <Link href="/painel/ativar" className="button button-primary button-small">Ativar</Link> : null}
         </div>
       </header>
 
-      {/* Barra inferior fixa para celular: acesso rápido + botão de ativação em destaque. */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-6 items-stretch border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom,0px)] lg:hidden">
-        {LINKS.slice(0, 3).map((l) => (
-          <LinkNavegacao key={l.href} href={l.href}>{l.label}</LinkNavegacao>
+      <nav className="mobile-nav lg:hidden" aria-label="Navegação móvel">
+        {LINKS.filter((l) => ["/painel", "/painel/desempenho", "/painel/placas", "/painel/clientes"].includes(l.href)).map((l) => (
+          <LinkNavegacao key={l.href} href={l.href} simbolo={l.simbolo}>{l.label}</LinkNavegacao>
         ))}
-        <Link
-          href="/painel/ativar"
-          className="botao-toque -mt-4 flex flex-1 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-lg"
-        >
-          Ativar
-        </Link>
-        {LINKS.slice(3).map((l) => (
-          <LinkNavegacao key={l.href} href={l.href}>{l.label}</LinkNavegacao>
-        ))}
+        <LinkNavegacao href="/painel/equipe" simbolo="•••">Mais</LinkNavegacao>
       </nav>
     </>
   );

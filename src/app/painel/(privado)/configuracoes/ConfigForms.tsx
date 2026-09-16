@@ -6,6 +6,7 @@ import {
   validarOrigemPublicaAction,
   criarVendedorAction,
 } from "@/lib/actions/configuracoes";
+import { criarCategoriaAction } from "@/lib/actions/categorias";
 import { Campo } from "@/components/ui/Campo";
 import { BotaoEnviar } from "@/components/ui/BotaoEnviar";
 import type { EstadoFormulario } from "@/lib/actions/auth";
@@ -58,6 +59,18 @@ export function NovoVendedorForm() {
       <Campo label="Senha temporária" name="senha" type="password" required />
       {estado.erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{estado.erro}</p>}
       <BotaoEnviar>Criar conta de vendedor</BotaoEnviar>
+    </form>
+  );
+}
+
+export function NovaCategoriaForm() {
+  const [estado, acao] = useActionState(criarCategoriaAction, estadoInicial);
+  return (
+    <form action={acao} className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
+      <label className="form-field">Nome<input name="nome" required placeholder="Ex.: Restaurante" /></label>
+      <label className="form-field">Cor<select name="cor" defaultValue="AZUL"><option value="AZUL">Azul</option><option value="VERDE">Verde</option><option value="VIOLETA">Violeta</option><option value="AMBAR">Âmbar</option><option value="ROSA">Rosa</option><option value="CINZA">Cinza</option></select></label>
+      <BotaoEnviar>Adicionar</BotaoEnviar>
+      {estado.erro ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 sm:col-span-3">{estado.erro}</p> : null}
     </form>
   );
 }

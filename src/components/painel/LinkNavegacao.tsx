@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function LinkNavegacao({ href, children }: { href: string; children: React.ReactNode }) {
+export function LinkNavegacao({ href, children, simbolo }: { href: string; children: React.ReactNode; simbolo?: string }) {
   const pathname = usePathname();
   const ativo = href === "/painel" ? pathname === href : pathname.startsWith(`${href}/`) || pathname === href;
-  return <Link href={href} aria-current={ativo ? "page" : undefined} className={`flex min-h-12 items-center justify-center rounded-lg px-2 text-center text-xs sm:text-sm ${ativo ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}>{children}</Link>;
+  return (
+    <Link href={href} aria-current={ativo ? "page" : undefined} className={`nav-link ${ativo ? "nav-link-active" : ""}`}>
+      {simbolo ? <span className="nav-symbol" aria-hidden="true">{simbolo}</span> : null}
+      <span>{children}</span>
+    </Link>
+  );
 }

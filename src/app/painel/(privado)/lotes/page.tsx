@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listarLotes } from "@/lib/db/repo/lotes";
 import { obterUsuarioAtual } from "@/lib/auth/sessao";
 import { formatarDataHora } from "@/lib/tempo";
+import { temPermissao } from "@/lib/auth/autorizacao";
+import { CabecalhoPagina, EstadoVazio, Secao } from "@/components/painel/PainelUI";
 
 export default async function PaginaLotes() {
   const usuario = await obterUsuarioAtual();
@@ -9,17 +11,10 @@ export default async function PaginaLotes() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Lotes</h1>
-        {usuario?.papel === "ADMIN" && (
-          <Link href="/painel/lotes/novo" className="botao-toque flex items-center rounded-lg bg-blue-600 px-3 text-sm font-medium text-white">
-            + Novo lote
-          </Link>
-        )}
-      </div>
+      <CabecalhoPagina titulo="Lotes" descricao="Produção, estoque e arquivos prontos para impressão." acao={usuario && temPermissao(usuario, "LOTES_CRIAR") ? <Link href="/painel/lotes/novo" className="button button-primary">+ Novo lote</Link> : undefined} />
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        <table className="w-full min-w-[500px] text-sm">
+      <Secao titulo={`${lotes.length} lote${lotes.length === 1 ? "" : "s"}`}>
+        {lotes.length ? <div className="table-wrap"><table>
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
               <th className="px-3 py-2">Código</th>
@@ -30,7 +25,7 @@ export default async function PaginaLotes() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {lotes.map((l: any) => (
+            {lotes.map((l) => (
               <tr key={l.id}>
                 <td data-label="Código" className="px-3 py-2">
                   <Link href={`/painel/lotes/${l.id}`} className="font-medium text-blue-600">
@@ -43,16 +38,9 @@ export default async function PaginaLotes() {
                 <td data-label="Criado em" className="px-3 py-2">{formatarDataHora(l.criado_em)}</td>
               </tr>
             ))}
-            {lotes.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
-                  Nenhum lote criado ainda.
-                </td>
-              </tr>
-            )}
           </tbody>
-        </table>
-      </div>
+        </table></div> : <EstadoVazio titulo="Nenhum lote criado" descricao="Crie o primeiro lote para gerar placas e arquivos de impressão." href={usuario && temPermissao(usuario, "LOTES_CRIAR") ? "/painel/lotes/novo" : undefined} acao="Criar lote" />}
+      </Secao>
     </div>
   );
 }

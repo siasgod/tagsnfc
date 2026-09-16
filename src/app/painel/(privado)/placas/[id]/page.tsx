@@ -3,39 +3,46 @@ import { buscarPlacaComDetalhes } from "@/lib/db/repo/placas";
 import { listarHistoricoDaPlaca } from "@/lib/db/repo/historico";
 import { listarVendedores } from "@/lib/db/repo/usuarios";
 import { obterUsuarioAtual } from "@/lib/auth/sessao";
+import { exigirAcessoPlaca, temPermissao } from "@/lib/auth/autorizacao";
 import { formatarDataHora } from "@/lib/tempo";
 import { marcarConferenciaAction, atribuirVendedorAction, registrarNfcAction } from "@/lib/actions/placas";
 import { DesativarForm, AlterarVinculoForm, SubstituirForm } from "./AcoesPlaca";
+import { Badge, CabecalhoPagina, CartaoMetrica, Secao } from "@/components/painel/PainelUI";
+import Link from "next/link";
 
 export default async function PaginaPlacaDetalhe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [placa, historico, usuario] = await Promise.all([
+  const usuario = (await obterUsuarioAtual())!;
+  await exigirAcessoPlaca(usuario, id);
+  const [placa, historico] = await Promise.all([
     buscarPlacaComDetalhes(id),
     listarHistoricoDaPlaca(id),
-    obterUsuarioAtual(),
   ]);
   if (!placa) notFound();
 
-  const vendedores = usuario?.papel === "ADMIN" ? await listarVendedores() : [];
+  const vendedores = usuario.papel === "ADMIN" ? await listarVendedores() : [];
+  const podeEditar = temPermissao(usuario, "PLACAS_EDITAR");
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">{placa.codigo}</h1>
-        <p className="text-sm text-slate-500">
-          Lote {placa.lote_codigo} · produção: {placa.estado_producao} · comercial: {placa.estado_comercial}
-        </p>
-      </div>
+      <CabecalhoPagina titulo={placa.codigo} descricao={`Lote ${placa.lote_codigo} · produção ${placa.estado_producao}`} acao={<div className="flex gap-2"><Badge tom={placa.estado_comercial}>{placa.estado_comercial}</Badge><Link href="/painel/placas" className="button button-secondary button-small">← Placas</Link></div>} />
+
+      <section className="stats-grid">
+        <CartaoMetrica rotulo="Interações" valor={placa.total_interacoes} detalhe="Total registrado" tom="azul" />
+        <CartaoMetrica rotulo="Via QR" valor={placa.interacoes_qr} detalhe="Aberturas por câmera" tom="verde" />
+        <CartaoMetrica rotulo="Via NFC" valor={placa.interacoes_nfc} detalhe="Aproximações" tom="violeta" />
+        <CartaoMetrica rotulo="Último acesso" valor={placa.ultima_interacao ? formatarDataHora(placa.ultima_interacao) : "—"} detalhe="QR ou NFC" tom="ambar" />
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <div className="surface p-4 text-sm">
           <p className="font-medium text-slate-700">Vínculo atual</p>
           <p className="mt-1">Cliente: {placa.cliente_nome ?? "—"}</p>
           <p>Estabelecimento: {placa.estabelecimento_nome ?? "—"}</p>
           <p className="break-all">Destino: {placa.destino_url ?? "—"}</p>
           <p>Vendedor: {placa.vendedor_nome ?? "—"}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <div className="surface p-4 text-sm">
           <p className="font-medium text-slate-700">URLs públicas</p>
           <p className="break-all">
             QR:{" "}
@@ -53,7 +60,7 @@ export default async function PaginaPlacaDetalhe({ params }: { params: Promise<{
       </section>
 
       {usuario?.papel === "ADMIN" && (
-        <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <section className="surface p-4">
           <p className="mb-2 text-sm font-medium text-slate-700">Conferências de produção</p>
           <div className="flex flex-wrap gap-2 text-sm">
             <form action={marcarConferenciaAction.bind(null, id, "conferencia_impressao_em")}>
@@ -107,19 +114,18 @@ export default async function PaginaPlacaDetalhe({ params }: { params: Promise<{
         </section>
       )}
 
-      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
+      {podeEditar ? <section className="surface space-y-2 p-4">
         <p className="text-sm font-medium text-slate-700">Ações</p>
         {placa.estado_comercial === "ATIVA" && <AlterarVinculoForm placaId={id} estabelecimentoAtualId={placa.estabelecimento_id} />}
         {placa.estado_comercial !== "DESATIVADA" && <div><DesativarForm placaId={id} /></div>}
         <div>
           <SubstituirForm placaId={id} />
         </div>
-      </section>
+      </section> : null}
 
-      <section>
-        <h2 className="mb-2 text-sm font-medium text-slate-500">Histórico</h2>
+      <Secao titulo="Histórico" descricao="Auditoria das alterações da placa">
         <ul className="space-y-2 text-sm">
-          {historico.map((h: any) => (
+          {historico.map((h) => (
             <li key={h.id} className="rounded-lg border border-slate-200 bg-white p-3">
               <p className="font-medium">{h.tipo}</p>
               <p className="text-xs text-slate-500">
@@ -130,7 +136,8 @@ export default async function PaginaPlacaDetalhe({ params }: { params: Promise<{
           ))}
           {historico.length === 0 && <p className="text-slate-400">Sem eventos registrados.</p>}
         </ul>
-      </section>
+      </Secao>
+      <p className="muted-note">Interações são acessos ao link da placa; não confirmam a publicação de uma avaliação.</p>
     </div>
   );
 }

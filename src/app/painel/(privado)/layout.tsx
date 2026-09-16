@@ -15,9 +15,9 @@ export default async function LayoutPrivado({ children }: { children: React.Reac
   }
 
   return (
-    <div className="painel flex min-h-dvh flex-1 flex-col">
+    <div className="painel min-h-dvh flex-1">
       <NavPainel usuario={usuario} />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-8 sm:pb-8">{children}</main>
+      <main className="page-shell lg:pl-[18.5rem]">{children}</main>
     </div>
   );
 }

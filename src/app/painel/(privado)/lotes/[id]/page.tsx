@@ -3,6 +3,7 @@ import { buscarLotePorId, listarPlacasDoLote } from "@/lib/db/repo/lotes";
 import { verificarLiberacaoProducao } from "@/lib/exportacao/gate";
 import { formatarDataHora } from "@/lib/tempo";
 import Link from "next/link";
+import { Badge, CabecalhoPagina, CartaoMetrica, Secao } from "@/components/painel/PainelUI";
 
 export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,22 +19,13 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">{lote.codigo}</h1>
-        <p className="text-sm text-slate-500">
-          {lote.quantidade} placas · origem: <span className="font-mono">{lote.origem_publica_usada}</span> · gerado em{" "}
-          {formatarDataHora(lote.criado_em)}
-        </p>
-      </div>
+      <CabecalhoPagina titulo={lote.codigo} descricao={`${lote.quantidade} placas · gerado em ${formatarDataHora(lote.criado_em)}`} acao={<Link href="/painel/lotes" className="button button-secondary">← Lotes</Link>} />
 
-      <div className="grid grid-cols-3 gap-3">
-        {[["Total", placas.length], ["Disponíveis", placas.filter(p => p.estado_comercial === "DISPONIVEL").length], ["Ativas", placas.filter(p => p.estado_comercial === "ATIVA").length]].map(([nome, valor]) => <div key={nome} className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">{nome}</p><p className="mt-2 text-2xl font-semibold">{valor}</p></div>)}
-      </div>
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 text-sm font-medium text-slate-700">Exportar para impressão</h2>
+      <section className="stats-grid"><CartaoMetrica rotulo="Total" valor={placas.length} tom="azul" /><CartaoMetrica rotulo="Disponíveis" valor={placas.filter(p => p.estado_comercial === "DISPONIVEL").length} tom="verde" /><CartaoMetrica rotulo="Ativas" valor={placas.filter(p => p.estado_comercial === "ATIVA").length} tom="violeta" /><CartaoMetrica rotulo="Em uso" valor={`${Math.round((placas.filter(p => p.estado_comercial === "ATIVA").length / Math.max(1, placas.length)) * 100)}%`} tom="ambar" /></section>
+      <Secao titulo="Exportar para impressão" descricao="Placas 100 × 100 mm com 3 mm de sangria" className="p-4 pt-0">
         {!liberacao.liberado && (
           <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Exportação "pronta para produção" bloqueada: {liberacao.motivo} As exportações abaixo serão geradas como
+            Exportação &quot;pronta para produção&quot; bloqueada: {liberacao.motivo} As exportações abaixo serão geradas como
             <strong> demonstração</strong>, com marca d&apos;água, até que isso seja resolvido em Configurações.
           </p>
         )}
@@ -52,11 +44,10 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
             </a>
           ))}
         </div>
-      </section>
+      </Secao>
 
-      <section>
-        <h2 className="mb-2 text-sm font-medium text-slate-500">Placas do lote</h2>
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <Secao titulo="Placas do lote" descricao={`Origem: ${lote.origem_publica_usada}`}>
+        <div className="table-wrap">
           <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
               <tr>
@@ -68,7 +59,7 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {placas.map((p: any) => (
+              {placas.map((p) => (
                 <tr key={p.id}>
                   <td data-label="Código" className="px-3 py-2">
                     <Link href={`/painel/placas/${p.id}`} className="font-medium text-blue-600">
@@ -76,7 +67,7 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
                     </Link>
                   </td>
                   <td data-label="Produção" className="px-3 py-2">{p.estado_producao}</td>
-                  <td data-label="Comercial" className="px-3 py-2">{p.estado_comercial}</td>
+                  <td data-label="Comercial" className="px-3 py-2"><Badge tom={p.estado_comercial}>{p.estado_comercial}</Badge></td>
                   <td data-label="Estabelecimento" className="px-3 py-2">{p.estabelecimento_nome ?? "—"}</td>
                   <td data-label="PDF" className="px-3 py-2">
                     <a
@@ -91,7 +82,7 @@ export default async function PaginaLoteDetalhe({ params }: { params: Promise<{ 
             </tbody>
           </table>
         </div>
-      </section>
+      </Secao>
     </div>
   );
 }

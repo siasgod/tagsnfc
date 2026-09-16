@@ -1,12 +1,19 @@
 import { ClienteForm } from "./ClienteForm";
+import { obterUsuarioAtual } from "@/lib/auth/sessao";
+import { podeVerTudo, temPermissao } from "@/lib/auth/autorizacao";
+import { listarCategorias } from "@/lib/db/repo/categorias";
+import { listarResponsaveisComerciais } from "@/lib/db/repo/usuarios";
+import { CabecalhoPagina, Secao } from "@/components/painel/PainelUI";
+import { redirect } from "next/navigation";
 
-export default function PaginaNovoCliente() {
+export default async function PaginaNovoCliente() {
+  const usuario = (await obterUsuarioAtual())!;
+  if (!temPermissao(usuario, "CLIENTES_EDITAR")) redirect("/painel/clientes");
+  const [categorias, responsaveis] = await Promise.all([listarCategorias(), podeVerTudo(usuario) ? listarResponsaveisComerciais() : Promise.resolve([])]);
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="mb-4 text-lg font-semibold">Novo cliente</h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <ClienteForm />
-      </div>
+    <div className="mx-auto max-w-2xl">
+      <CabecalhoPagina titulo="Novo cliente" descricao="Cadastre os dados comerciais e organize a carteira desde o início." />
+      <Secao className="p-5"><ClienteForm categorias={categorias} responsaveis={responsaveis} mostrarResponsavel={podeVerTudo(usuario)} /></Secao>
     </div>
   );
 }
