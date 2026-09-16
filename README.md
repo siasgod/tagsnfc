@@ -70,6 +70,10 @@ npm run db:migrate   # cria o schema
 npm run dev           # http://localhost:3000
 ```
 
+Na Vercel, o script `vercel-build` executa o mesmo runner antes da compilação.
+As migrações são versionadas, transacionais e protegidas por advisory lock;
+se uma migração falhar, o novo deploy não é publicado.
+
 Enquanto `NEXT_PUBLIC_ORIGEM_PUBLICA` for `http://localhost:3000` (o padrão
 do `.env.example`), o sistema trata isso como ambiente de desenvolvimento e
 **bloqueia exportação "pronta para produção"** dos PDFs de impressão —
@@ -90,8 +94,8 @@ vazia **e** o token enviado bater com a variável de ambiente `SETUP_TOKEN`:
    — mesmo com o token certo — porque a checagem é "já existe algum usuário?"
    e não "esse token específico já foi usado". Depois de usar, troque ou
    remova `SETUP_TOKEN` do ambiente.
-4. Novos usuários (admin ou vendedor) são criados de dentro do painel, por um
-   admin já autenticado, em Configurações → Usuários.
+4. Novos usuários (administrador, gerente, vendedor ou visualizador) são
+   criados por um admin autenticado em Painel → Equipe.
 
 Alternativa por linha de comando (útil se `/painel/setup` não for viável,
 por exemplo antes do primeiro deploy): `npm run db:criar-admin`.

@@ -26,6 +26,8 @@ async function main() {
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
+  const lockMigracoes = 748273946251;
+  await client.query("SELECT pg_advisory_lock($1)", [lockMigracoes]);
 
   try {
     await client.query(`
@@ -64,6 +66,7 @@ async function main() {
 
     console.log("Migrações em dia.");
   } finally {
+    await client.query("SELECT pg_advisory_unlock($1)", [lockMigracoes]).catch(() => undefined);
     await client.end();
   }
 }
