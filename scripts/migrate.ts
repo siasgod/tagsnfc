@@ -37,6 +37,27 @@ async function main() {
       );
     `);
 
+    // Instalações anteriores ao runner já podem ter o schema 0001 completo,
+    // mas ainda não possuir seu registro em _migrations. Só adotamos esse
+    // baseline quando todas as tabelas centrais existem; um schema parcial
+    // continua falhando explicitamente, em vez de ser marcado como válido.
+    const tabelasIniciais = [
+      "usuarios", "sessoes", "clientes", "estabelecimentos", "lotes",
+      "placas", "vendas", "eventos_acesso", "configuracoes",
+    ];
+    const { rows: existencia } = await client.query<{ total: number }>(
+      `SELECT count(*)::int AS total
+       FROM unnest($1::text[]) AS nome
+       WHERE to_regclass('public.' || nome) IS NOT NULL`,
+      [tabelasIniciais]
+    );
+    if (existencia[0]?.total === tabelasIniciais.length) {
+      const baseline = await client.query(
+        "INSERT INTO _migrations (nome) VALUES ('0001_init.sql') ON CONFLICT DO NOTHING RETURNING nome"
+      );
+      if (baseline.rowCount) console.log("[baseline] 0001_init.sql (schema existente adotado)");
+    }
+
     const arquivos = readdirSync(MIGRATIONS_DIR)
       .filter((f) => f.endsWith(".sql"))
       .sort();
