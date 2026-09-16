@@ -51,7 +51,11 @@ export async function buscarPlacaPorCodigoOuToken(entrada: string) {
 export async function buscarPlacaComDetalhes(id: string) {
   const { rows } = await pool.query(
     `SELECT p.*, e.nome AS estabelecimento_nome, c.id AS cliente_id, c.nome AS cliente_nome,
-            v.nome AS vendedor_nome, l.codigo AS lote_codigo
+            v.nome AS vendedor_nome, l.codigo AS lote_codigo,
+            (SELECT count(*)::int FROM eventos_acesso ev WHERE ev.placa_id = p.id AND ev.eh_teste = false) AS total_interacoes,
+            (SELECT count(*)::int FROM eventos_acesso ev WHERE ev.placa_id = p.id AND ev.eh_teste = false AND ev.canal = 'QR') AS interacoes_qr,
+            (SELECT count(*)::int FROM eventos_acesso ev WHERE ev.placa_id = p.id AND ev.eh_teste = false AND ev.canal = 'NFC') AS interacoes_nfc,
+            (SELECT max(ev.data_hora) FROM eventos_acesso ev WHERE ev.placa_id = p.id AND ev.eh_teste = false) AS ultima_interacao
      FROM placas p
      LEFT JOIN estabelecimentos e ON e.id = p.estabelecimento_id
      LEFT JOIN clientes c ON c.id = e.cliente_id
@@ -85,7 +89,9 @@ export async function listarPlacas(filtro: {
   }
 
   const { rows } = await pool.query(
-    `SELECT p.*, e.nome AS estabelecimento_nome, c.nome AS cliente_nome, v.nome AS vendedor_nome
+    `SELECT p.*, e.nome AS estabelecimento_nome, c.nome AS cliente_nome, v.nome AS vendedor_nome,
+            (SELECT count(*)::int FROM eventos_acesso ev WHERE ev.placa_id = p.id AND ev.eh_teste = false) AS total_interacoes,
+            (SELECT max(ev.data_hora) FROM eventos_acesso ev WHERE ev.placa_id = p.id AND ev.eh_teste = false) AS ultima_interacao
      FROM placas p
      LEFT JOIN estabelecimentos e ON e.id = p.estabelecimento_id
      LEFT JOIN clientes c ON c.id = e.cliente_id
@@ -100,10 +106,16 @@ export async function listarPlacas(filtro: {
 
 export async function listarPlacasPorCliente(clienteId: string) {
   const { rows } = await pool.query(
-    `SELECT p.*, e.nome AS estabelecimento_nome
+    `SELECT p.*, e.nome AS estabelecimento_nome,
+            count(ev.id) FILTER (WHERE ev.eh_teste = false)::int AS total_interacoes,
+            count(ev.id) FILTER (WHERE ev.eh_teste = false AND ev.canal = 'QR')::int AS interacoes_qr,
+            count(ev.id) FILTER (WHERE ev.eh_teste = false AND ev.canal = 'NFC')::int AS interacoes_nfc,
+            max(ev.data_hora) FILTER (WHERE ev.eh_teste = false) AS ultima_interacao
      FROM placas p
      JOIN estabelecimentos e ON e.id = p.estabelecimento_id
+     LEFT JOIN eventos_acesso ev ON ev.placa_id = p.id
      WHERE e.cliente_id = $1
+     GROUP BY p.id, e.nome
      ORDER BY p.codigo`,
     [clienteId]
   );

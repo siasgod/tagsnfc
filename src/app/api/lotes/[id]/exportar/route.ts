@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { exigirUsuario } from "@/lib/auth/autorizacao";
+import { exigirPermissao } from "@/lib/auth/autorizacao";
 import { buscarLotePorId, listarPlacasDoLote } from "@/lib/db/repo/lotes";
 import { obterConfiguracao } from "@/lib/db/repo/configuracoes";
 import { verificarLiberacaoProducao } from "@/lib/exportacao/gate";
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 }
 
 async function exportarLote(request: NextRequest, context: { params: Promise<{ id: string }> }): Promise<Response> {
-  await exigirUsuario();
+  await exigirPermissao("LOTES_VER");
   const { id } = await context.params;
   const { searchParams } = request.nextUrl;
   const tipo = searchParams.get("tipo") ?? "multipagina";

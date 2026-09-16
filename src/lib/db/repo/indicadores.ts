@@ -22,6 +22,13 @@ export interface Indicadores {
   acessosNfc: number;
 }
 
+export interface ResumoOperacionalHoje {
+  vendas: number;
+  placasAtivadas: number;
+  interacoesQr: number;
+  interacoesNfc: number;
+}
+
 export async function obterIndicadores(filtro: FiltroIndicadores): Promise<Indicadores> {
   const filtroVendedorPlacas = filtro.vendedorId ? "AND vendedor_atribuido_id = $1" : "";
   const paramsPlacas = filtro.vendedorId ? [filtro.vendedorId] : [];
@@ -111,5 +118,46 @@ export async function obterIndicadores(filtro: FiltroIndicadores): Promise<Indic
     margemBrutaEstimadaCentavos: valorVendidoCentavos - custosNoPeriodoCentavos,
     acessosQr,
     acessosNfc,
+  };
+}
+
+export async function obterResumoOperacionalHoje(inicio: Date, fim: Date, vendedorId?: string): Promise<ResumoOperacionalHoje> {
+  const params: unknown[] = [inicio, fim];
+  let escopoVenda = "";
+  let escopoPlaca = "";
+  if (vendedorId) {
+    params.push(vendedorId);
+    escopoVenda = `AND v.vendedor_id = $${params.length}`;
+    escopoPlaca = `AND (p.vendedor_atribuido_id = $${params.length} OR c.vendedor_responsavel_id = $${params.length})`;
+  }
+  const [vendas, ativacoes, eventos] = await Promise.all([
+    pool.query<{ total: number }>(
+      `SELECT count(*)::int AS total FROM vendas v
+       WHERE v.criado_em BETWEEN $1 AND $2 AND v.cancelada_em IS NULL ${escopoVenda}`,
+      params
+    ),
+    pool.query<{ total: number }>(
+      `SELECT count(*)::int AS total FROM placas p
+       LEFT JOIN estabelecimentos e ON e.id = p.estabelecimento_id
+       LEFT JOIN clientes c ON c.id = e.cliente_id
+       WHERE p.ativada_em BETWEEN $1 AND $2 ${escopoPlaca}`,
+      params
+    ),
+    pool.query<{ qr: number; nfc: number }>(
+      `SELECT count(*) FILTER (WHERE ev.canal = 'QR')::int AS qr,
+              count(*) FILTER (WHERE ev.canal = 'NFC')::int AS nfc
+       FROM eventos_acesso ev
+       JOIN placas p ON p.id = ev.placa_id
+       LEFT JOIN estabelecimentos e ON e.id = ev.estabelecimento_id
+       LEFT JOIN clientes c ON c.id = e.cliente_id
+       WHERE ev.data_hora BETWEEN $1 AND $2 AND ev.eh_teste = false ${escopoPlaca}`,
+      params
+    ),
+  ]);
+  return {
+    vendas: vendas.rows[0]?.total ?? 0,
+    placasAtivadas: ativacoes.rows[0]?.total ?? 0,
+    interacoesQr: eventos.rows[0]?.qr ?? 0,
+    interacoesNfc: eventos.rows[0]?.nfc ?? 0,
   };
 }

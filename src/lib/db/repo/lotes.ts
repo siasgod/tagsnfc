@@ -2,6 +2,7 @@ import { pool, transacao } from "@/lib/db/pool";
 import { gerarCodigoHumano, gerarCodigoLote, gerarTokenAleatorio } from "@/lib/tokens";
 import { registrarHistorico } from "@/lib/db/repo/historico";
 import type { PoolClient } from "pg";
+import type { PlacaRegistro } from "@/lib/db/repo/placas";
 
 export interface LoteRegistro {
   id: string;
@@ -82,7 +83,7 @@ export async function criarLoteComPlacas(dados: {
 }
 
 export async function listarLotes() {
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<LoteRegistro & { criado_por_nome: string | null; disponiveis: string; ativas: string }>(
     `SELECT l.*, u.nome AS criado_por_nome,
             (SELECT count(*) FROM placas p WHERE p.lote_id = l.id AND p.estado_comercial = 'DISPONIVEL') AS disponiveis,
             (SELECT count(*) FROM placas p WHERE p.lote_id = l.id AND p.estado_comercial = 'ATIVA') AS ativas
@@ -99,7 +100,7 @@ export async function buscarLotePorId(id: string) {
 }
 
 export async function listarPlacasDoLote(loteId: string) {
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<PlacaRegistro & { estabelecimento_nome: string | null; cliente_nome: string | null; vendedor_nome: string | null }>(
     `SELECT p.*, e.nome AS estabelecimento_nome, c.nome AS cliente_nome, v.nome AS vendedor_nome
      FROM placas p
      LEFT JOIN estabelecimentos e ON e.id = p.estabelecimento_id

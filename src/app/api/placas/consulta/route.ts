@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { exigirUsuario } from "@/lib/auth/autorizacao";
+import { exigirAcessoPlaca, exigirPermissao } from "@/lib/auth/autorizacao";
 import { buscarPlacaPorCodigoOuToken } from "@/lib/db/repo/placas";
 import { comTratamentoDeErros } from "@/lib/api-utils";
 
@@ -10,12 +10,13 @@ import { comTratamentoDeErros } from "@/lib/api-utils";
  */
 export async function GET(request: NextRequest) {
   return comTratamentoDeErros(async () => {
-    await exigirUsuario();
+    const usuario = await exigirPermissao("PLACAS_VER");
     const identificador = request.nextUrl.searchParams.get("identificador")?.trim();
     if (!identificador) return Response.json({ erro: "Informe um código ou token." }, { status: 400 });
 
     const placa = await buscarPlacaPorCodigoOuToken(identificador);
     if (!placa) return Response.json({ erro: "Placa não encontrada." }, { status: 404 });
+    await exigirAcessoPlaca(usuario, placa.id);
 
     return Response.json({
       id: placa.id,

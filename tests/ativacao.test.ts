@@ -181,8 +181,8 @@ test("pagamento parcial calcula situação corretamente e substituição preserv
 
   const historicoAntiga = await listarHistoricoDaPlaca(placas[0].id);
   const historicoNova = await listarHistoricoDaPlaca(placas[1].id);
-  assert.ok(historicoAntiga.some((h: any) => h.tipo === "SUBSTITUICAO"));
-  assert.ok(historicoNova.some((h: any) => h.tipo === "SUBSTITUICAO"));
+  assert.ok(historicoAntiga.some((h) => h.tipo === "SUBSTITUICAO"));
+  assert.ok(historicoNova.some((h) => h.tipo === "SUBSTITUICAO"));
 });
 
 after(async () => {

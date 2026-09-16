@@ -4,9 +4,9 @@ import { createHash } from "node:crypto";
 export type CanalAcesso = "QR" | "NFC" | "DESCONHECIDO";
 
 /**
- * Registro de acesso "best-effort": chamado pela rota pública depois de
- * decidir o redirecionamento, nunca antes — uma falha aqui jamais deve
- * impedir o redirecionamento (ver src/app/p/[token]/route.ts).
+ * Registro de acesso "best-effort": a rota pública aguarda a tentativa de
+ * persistência antes de responder, mas uma falha aqui jamais deve impedir o
+ * redirecionamento (ver src/app/p/[token]/route.ts).
  * IP é hasheado (nunca guardado em texto claro) para reduzir dado pessoal
  * retido, mantendo a possibilidade de detectar repetições grosseiras.
  */
@@ -67,6 +67,36 @@ export async function listarEventosPorDia(dias: number, vendedorId?: string) {
      JOIN placas p ON p.id = ev.placa_id
      WHERE ev.data_hora > now() - ($1 || ' days')::interval AND ev.eh_teste = false ${filtroVendedor}
      GROUP BY 1 ORDER BY 1`,
+    params
+  );
+  return rows;
+}
+
+export async function listarUltimasInteracoes(limite = 12, vendedorId?: string) {
+  const params: unknown[] = [limite];
+  let escopo = "";
+  if (vendedorId) {
+    params.push(vendedorId);
+    escopo = `AND c.vendedor_responsavel_id = $${params.length}`;
+  }
+  const { rows } = await pool.query<{
+    id: string;
+    data_hora: Date;
+    canal: CanalAcesso;
+    placa_id: string;
+    placa_codigo: string;
+    estabelecimento_nome: string | null;
+    cliente_id: string | null;
+    cliente_nome: string | null;
+  }>(
+    `SELECT ev.id, ev.data_hora, ev.canal, p.id AS placa_id, p.codigo AS placa_codigo,
+            e.nome AS estabelecimento_nome, c.id AS cliente_id, c.nome AS cliente_nome
+     FROM eventos_acesso ev
+     JOIN placas p ON p.id = ev.placa_id
+     LEFT JOIN estabelecimentos e ON e.id = ev.estabelecimento_id
+     LEFT JOIN clientes c ON c.id = e.cliente_id
+     WHERE ev.eh_teste = false ${escopo}
+     ORDER BY ev.data_hora DESC LIMIT $1`,
     params
   );
   return rows;

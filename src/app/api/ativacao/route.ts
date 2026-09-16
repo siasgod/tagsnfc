@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { exigirUsuario } from "@/lib/auth/autorizacao";
+import { exigirAcessoCliente, exigirPermissao } from "@/lib/auth/autorizacao";
+import { buscarEstabelecimentoPorId } from "@/lib/db/repo/estabelecimentos";
 import { validarDestino } from "@/lib/validacao/destino";
 import { ativarPlaca, ErroAtivacao } from "@/lib/db/repo/ativacao";
 import { limitarTaxa, ipDaRequisicao } from "@/lib/rate-limit";
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function ativarViaHttp(request: NextRequest): Promise<Response> {
-  const usuario = await exigirUsuario();
+  const usuario = await exigirPermissao("ATIVAR_PLACA");
 
   const ip = ipDaRequisicao(request.headers);
   const { permitido } = limitarTaxa(`ativacao:${usuario.id}:${ip}`, 30, 60_000);
@@ -60,6 +61,13 @@ async function ativarViaHttp(request: NextRequest): Promise<Response> {
     return Response.json({ erro: dados.error.issues[0]?.message ?? "Dados inválidos." }, { status: 400 });
   }
   const entrada = dados.data;
+
+  if (entrada.clienteId) await exigirAcessoCliente(usuario, entrada.clienteId);
+  if (entrada.estabelecimentoId) {
+    const estabelecimento = await buscarEstabelecimentoPorId(entrada.estabelecimentoId);
+    if (!estabelecimento) return Response.json({ erro: "Estabelecimento não encontrado." }, { status: 404 });
+    await exigirAcessoCliente(usuario, estabelecimento.cliente_id);
+  }
 
   if (entrada.venda && entrada.venda.tipo !== "VENDA" && !entrada.venda.justificativa) {
     return Response.json({ erro: "Demonstração e bonificação exigem uma justificativa." }, { status: 400 });

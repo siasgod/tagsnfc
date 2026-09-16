@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { exigirAdmin } from "@/lib/auth/autorizacao";
+import { exigirPermissao } from "@/lib/auth/autorizacao";
 import { criarLoteComPlacas } from "@/lib/db/repo/lotes";
 import { parametrosImpressaoPadrao, TEMPLATE_VERSAO_ATUAL } from "@/lib/pdf/cartao";
 import { origemAtualConfigurada } from "@/lib/origem-publica";
@@ -14,7 +14,7 @@ const esquemaLote = z.object({
 });
 
 export async function criarLoteAction(_estado: EstadoFormulario, formData: FormData): Promise<EstadoFormulario> {
-  const usuario = await exigirAdmin();
+  const usuario = await exigirPermissao("LOTES_CRIAR");
   const dados = esquemaLote.safeParse(Object.fromEntries(formData));
   if (!dados.success) return { erro: dados.error.issues[0]?.message };
 

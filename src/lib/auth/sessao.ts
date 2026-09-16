@@ -6,7 +6,7 @@ import { pool } from "@/lib/db/pool";
 const NOME_COOKIE = "sessao";
 const DURACAO_SESSAO_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
-export type PapelUsuario = "ADMIN" | "VENDEDOR";
+export type PapelUsuario = "ADMIN" | "GERENTE" | "VENDEDOR" | "VISUALIZADOR";
 
 export interface UsuarioSessao {
   id: string;

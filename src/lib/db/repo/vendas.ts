@@ -16,6 +16,32 @@ export interface VendaRegistro {
   criado_em: Date;
 }
 
+export interface ItemVendaDetalhe {
+  id: string;
+  venda_id: string;
+  placa_id: string;
+  placa_codigo: string;
+  preco_centavos: number;
+  custo_centavos: number;
+}
+
+export interface PagamentoRegistro {
+  id: string;
+  venda_id: string;
+  forma: "PIX" | "DINHEIRO" | "CARTAO" | "OUTRO";
+  valor_centavos: number;
+  data_pagamento: Date;
+  observacoes: string | null;
+  estornado_em: Date | null;
+}
+
+export interface VendaDetalhe extends VendaRegistro {
+  cliente_nome: string | null;
+  vendedor_nome: string;
+  itens: ItemVendaDetalhe[];
+  pagamentos: PagamentoRegistro[];
+}
+
 /**
  * Cria uma venda com um ou mais itens (placas). Preço e custo são
  * congelados no momento da venda (colunas próprias em itens_venda), então
@@ -160,7 +186,7 @@ export async function listarVendasPorCliente(clienteId: string) {
 }
 
 export async function buscarVendaComDetalhes(id: string) {
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<VendaRegistro & { cliente_nome: string | null; vendedor_nome: string }>(
     `SELECT v.*, c.nome AS cliente_nome, u.nome AS vendedor_nome
      FROM vendas v
      LEFT JOIN clientes c ON c.id = v.cliente_id
@@ -169,13 +195,13 @@ export async function buscarVendaComDetalhes(id: string) {
     [id]
   );
   if (!rows[0]) return null;
-  const { rows: itens } = await pool.query(
+  const { rows: itens } = await pool.query<ItemVendaDetalhe>(
     `SELECT iv.*, p.codigo AS placa_codigo FROM itens_venda iv JOIN placas p ON p.id = iv.placa_id WHERE iv.venda_id = $1`,
     [id]
   );
-  const { rows: pagamentos } = await pool.query(
+  const { rows: pagamentos } = await pool.query<PagamentoRegistro>(
     `SELECT * FROM pagamentos WHERE venda_id = $1 ORDER BY data_pagamento`,
     [id]
   );
-  return { ...rows[0], itens, pagamentos };
+  return { ...rows[0], itens, pagamentos } satisfies VendaDetalhe;
 }

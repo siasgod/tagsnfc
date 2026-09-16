@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { exigirUsuario } from "@/lib/auth/autorizacao";
+import { exigirAcessoVenda, exigirPermissao } from "@/lib/auth/autorizacao";
 import { registrarPagamento } from "@/lib/db/repo/vendas";
 import { paraCentavos } from "@/lib/dinheiro";
 import type { EstadoFormulario } from "@/lib/actions/auth";
@@ -14,7 +14,8 @@ const esquema = z.object({
 });
 
 export async function registrarPagamentoAction(vendaId: string, _e: EstadoFormulario, formData: FormData): Promise<EstadoFormulario> {
-  const usuario = await exigirUsuario();
+  const usuario = await exigirPermissao("VENDAS_EDITAR");
+  await exigirAcessoVenda(usuario, vendaId);
   const dados = esquema.safeParse(Object.fromEntries(formData));
   if (!dados.success) return { erro: dados.error.issues[0]?.message };
 

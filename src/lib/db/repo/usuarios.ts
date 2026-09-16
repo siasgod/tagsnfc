@@ -50,9 +50,19 @@ export async function listarVendedores() {
   return rows;
 }
 
+export async function listarResponsaveisComerciais() {
+  const { rows } = await pool.query<Pick<UsuarioRegistro, "id" | "nome" | "email" | "papel" | "ativo">>(
+    "SELECT id, nome, email, papel, ativo FROM usuarios WHERE ativo = true AND papel IN ('ADMIN','GERENTE','VENDEDOR') ORDER BY nome"
+  );
+  return rows;
+}
+
 export async function listarUsuarios() {
-  const { rows } = await pool.query<Pick<UsuarioRegistro, "id" | "nome" | "email" | "papel" | "ativo" | "criado_em">>(
-    "SELECT id, nome, email, papel, ativo, criado_em FROM usuarios ORDER BY criado_em"
+  const { rows } = await pool.query<Pick<UsuarioRegistro, "id" | "nome" | "email" | "papel" | "ativo" | "criado_em"> & { ultimo_acesso: Date | null }>(
+    `SELECT u.id, u.nome, u.email, u.papel, u.ativo, u.criado_em,
+            max(s.criado_em) AS ultimo_acesso
+     FROM usuarios u LEFT JOIN sessoes s ON s.usuario_id = u.id
+     GROUP BY u.id ORDER BY u.ativo DESC, u.nome`
   );
   return rows;
 }

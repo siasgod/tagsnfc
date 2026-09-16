@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
-import { exigirUsuario, podeVerTudo } from "@/lib/auth/autorizacao";
+import { exigirPermissao, podeVerTudo } from "@/lib/auth/autorizacao";
 import { listarClientes } from "@/lib/db/repo/clientes";
 import { listarEstabelecimentosPorCliente } from "@/lib/db/repo/estabelecimentos";
 import { comTratamentoDeErros } from "@/lib/api-utils";
 
 export async function GET(request: NextRequest) {
   return comTratamentoDeErros(async () => {
-    const usuario = await exigirUsuario();
+    const usuario = await exigirPermissao("CLIENTES_VER");
     const q = request.nextUrl.searchParams.get("q") ?? "";
     const clientes = await listarClientes({
       vendedorId: podeVerTudo(usuario) ? undefined : usuario.id,

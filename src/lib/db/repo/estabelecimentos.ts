@@ -54,3 +54,30 @@ export async function buscarEstabelecimentoPorId(id: string) {
   );
   return rows[0] ?? null;
 }
+
+export async function listarEstabelecimentos(filtro: { vendedorId?: string; busca?: string }) {
+  const params: unknown[] = [];
+  const condicoes = ["e.arquivado_em IS NULL", "c.arquivado_em IS NULL"];
+  if (filtro.vendedorId) {
+    params.push(filtro.vendedorId);
+    condicoes.push(`c.vendedor_responsavel_id = $${params.length}`);
+  }
+  if (filtro.busca) {
+    params.push(`%${filtro.busca}%`);
+    condicoes.push(`(e.nome ILIKE $${params.length} OR e.endereco ILIKE $${params.length} OR c.nome ILIKE $${params.length})`);
+  }
+  const { rows } = await pool.query(
+    `SELECT e.*, c.nome AS cliente_nome, c.id AS cliente_id,
+            count(DISTINCT p.id)::int AS total_placas,
+            count(ev.id) FILTER (WHERE ev.eh_teste = false)::int AS total_interacoes
+     FROM estabelecimentos e
+     JOIN clientes c ON c.id = e.cliente_id
+     LEFT JOIN placas p ON p.estabelecimento_id = e.id
+     LEFT JOIN eventos_acesso ev ON ev.placa_id = p.id
+     WHERE ${condicoes.join(" AND ")}
+     GROUP BY e.id, c.id, c.nome
+     ORDER BY e.nome LIMIT 300`,
+    params
+  );
+  return rows;
+}

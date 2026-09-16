@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { buscarPlacaPorToken } from "@/lib/db/repo/placas";
-import { registrarEventoAcesso, type CanalAcesso } from "@/lib/db/repo/eventos";
+import { registrarEventoAcesso } from "@/lib/db/repo/eventos";
 import { ipDaRequisicao } from "@/lib/rate-limit";
+import { canalDoParametro } from "@/lib/canal-acesso";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,12 +37,6 @@ function pagina(titulo: string, mensagem: string, status: number): Response {
   });
 }
 
-function canalDoParametro(via: string | null): CanalAcesso {
-  if (via === "qr") return "QR";
-  if (via === "nfc") return "NFC";
-  return "DESCONHECIDO";
-}
-
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ token: string }> }
@@ -66,18 +61,21 @@ export async function GET(
     return pagina("Página não encontrada", "Este código não corresponde a nenhuma placa.", 404);
   }
 
-  // Registro de acesso: melhor esforço, nunca bloqueia o redirecionamento.
-  // Qualquer falha aqui é apenas logada — a indisponibilidade da coleta de
-  // métricas não pode impedir a função principal da placa.
-  void registrarEventoAcesso({
-    placaId: placa.id,
-    estabelecimentoId: placa.estabelecimento_id,
-    canal,
-    ip: ipDaRequisicao(request.headers),
-    userAgent: request.headers.get("user-agent"),
-  }).catch((err) => {
+  // Aguarda a tentativa de escrita antes de devolver o redirect para que o
+  // evento não seja descartado quando a função serverless encerrar. A coleta
+  // continua sendo best-effort: falhas são registradas, mas nunca impedem o
+  // acesso ao destino principal da placa.
+  try {
+    await registrarEventoAcesso({
+      placaId: placa.id,
+      estabelecimentoId: placa.estabelecimento_id,
+      canal,
+      ip: ipDaRequisicao(request.headers),
+      userAgent: request.headers.get("user-agent"),
+    });
+  } catch (err) {
     console.error("[/p/token] falha ao registrar evento de acesso (ignorada):", err);
-  });
+  }
 
   switch (placa.estado_comercial) {
     case "ATIVA": {

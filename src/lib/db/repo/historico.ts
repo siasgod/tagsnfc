@@ -13,6 +13,16 @@ export type TipoEventoHistorico =
   | "TRANSFERENCIA_VENDEDOR"
   | "OUTRO";
 
+export interface HistoricoRegistro {
+  id: string;
+  placa_id: string | null;
+  usuario_id: string | null;
+  tipo: TipoEventoHistorico;
+  detalhes_json: Record<string, unknown>;
+  criado_em: Date;
+  usuario_nome: string | null;
+}
+
 export async function registrarHistorico(
   dados: {
     tipo: TipoEventoHistorico;
@@ -30,7 +40,7 @@ export async function registrarHistorico(
 }
 
 export async function listarHistoricoDaPlaca(placaId: string) {
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<HistoricoRegistro>(
     `SELECT h.*, u.nome AS usuario_nome
      FROM historico_alteracoes h
      LEFT JOIN usuarios u ON u.id = h.usuario_id
